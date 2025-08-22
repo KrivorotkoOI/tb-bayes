@@ -1,0 +1,76 @@
+model_kwargs:
+#ODE model right side
+  equation_strings:
+    S:   "- beta*S*(Is+Ig)/N                            + gamma_1*(EgT+IgT)+ gamma_2*(EsT+IsT)   - mu*S + b*N-m*N**2"
+    Es:  "  beta*S*Is/N     - phi_m*Es - Es*(tg + beta/N*Ig)  - omega*Es                            - mu*Es"
+    Eg:  "  beta*S*Ig/N     - phi_m*Eg + Es*(tg + beta/N*Ig)  - omega*Eg                            - mu*Eg"
+    Is:  "                  - phi_p*Is - Is*(tg + beta/N*Ig)  + omega*Es                            - (alpha+mu)*Is"
+    Ig:  "                  - phi_p*Ig + Is*(tg + beta/N*Ig)  + omega*Eg                            - (alpha+mu)*Ig"
+    EsT: "                    phi_m*Es - EsT*(tg + beta/N*Ig) - gamma_2*EsT + gamma_2*IsT           - mu*EsT"
+    EgT: "                    phi_m*Eg + EsT*(tg + beta/N*Ig) - gamma_1*EgT + gamma_1*IgT           - mu*EgT"
+    IsT: "                    phi_p*Is - IsT*(tg + beta/N*Ig) - 2*gamma_2*IsT                       - (alpha+mu)*IsT"
+    IgT: "                    phi_p*Ig + IsT*(tg + beta/N*Ig) - 2*gamma_1*IgT                       - (alpha+mu)*IgT"
+
+#ODE model aliases
+  custom_vars:
+    N: 'S+Es+Eg+Is+Ig+EsT+EgT+IsT+IgT'
+    m: '(b-mu)/k'
+
+  #t_start: 2007
+  t_end: 2023
+  step: 0.005
+#ODE model initial state
+
+#default
+initial_state:
+    S: 1000000.
+    Es: 3000.
+    Eg: 100.
+    Is: 1500.
+    Ig: 50.
+    
+    EsT: 500.
+    EgT: 10.
+    IsT: 500.
+    IgT: 25.
+
+#parameters of ODE model
+default_params:
+  b: 0.0142
+  mu: 0.0174
+  k: 4000000
+  beta: 0.0015002
+  gamma_1: 0.05
+  gamma_2: 0.05
+  omega: 0.05
+  phi_m: 0.01
+  phi_p: 0.01
+  tg: 0.02
+  alpha: 0.1
+  non-treated: 1
+  
+  
+estim_and_bounds:
+  beta: [0.01,20]
+  gamma_1: [0.2 ,0.5] #mlu treatment
+  gamma_2: [0.25,2.]
+  omega: [0.25,4]
+  phi_m: [0.1,1]      #bk- search
+  phi_p: [0.5,3]
+  tg: [0.001,0.1]
+  alpha: [0.03,0.2]
+  non-treated: [0.25, 2]
+
+db_keys:
+  contingents: 15
+  #J3: 10
+  #J1: 6
+  N: 28
+  IgT: 56
+  IgT_part: 41
+  
+passed_keys:
+  - IsT
+  - IgT
+  - EsT + EgT
+  #- N
