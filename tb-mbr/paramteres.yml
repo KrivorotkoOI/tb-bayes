@@ -51,11 +51,11 @@ default_params:
   
   
 estim_and_bounds:
-  beta: [0.01,20]
-  gamma_1: [0.2 ,0.5] #mlu treatment
-  gamma_2: [0.25,2.]
+  beta: [0.0,10]
+  gamma_1: [0.25,0.5] #mlu treatment
+  gamma_2: [0.3,2.0]
   omega: [0.25,4]
-  phi_m: [0.1,1]      #bk- search
+  phi_m: [0.2,0.5]      #bk- search
   phi_p: [0.5,3]
   tg: [0.001,0.1]
   alpha: [0.03,0.2]
