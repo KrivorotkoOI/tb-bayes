@@ -24,11 +24,12 @@ params = p["default_params"]
 estimation_bounds = p["estim_and_bounds"]
 
 def custom_model(initial_state, params, **kwargs):
-    coef = params['non-treated']
-    initial_state["Es"] = np.array(initial_state["EsT"]) * coef
-    initial_state["Eg"] = np.array(initial_state["EgT"]) * coef
-    initial_state["Is"] = np.array(initial_state["IsT"]) * coef
-    initial_state["Ig"] = np.array(initial_state["IgT"]) * coef
+    coef_minus = params['non-treated-minus']
+    coef_plus = params['non-treated-plus']
+    initial_state["Es"] = np.array(initial_state["EsT"]) * coef_minus
+    initial_state["Eg"] = np.array(initial_state["EgT"]) * coef_minus
+    initial_state["Is"] = np.array(initial_state["IsT"]) * coef_plus
+    initial_state["Ig"] = np.array(initial_state["IgT"]) * coef_plus
     res = ode_solve(initial_state=initial_state, params=params, **kwargs)
     res["EsT + EgT"] = Data(data=res["EsT"].data + res["EgT"].data, points=res["EgT"].points, keys=["ET"])
     #res["N"] = Data(data=(res["EsT + EgT"].data + res["IgT"].data + res["IsT"].data + res["Ig"].data + res["Is"].data 
@@ -90,7 +91,8 @@ for region in all_regions[50:]:
     
     coef = 0
     #prepare data for inverse problem and initial state
-    try:
+    #try:
+    if True:
         df_region["IsT"] = df_region["IgT"] * (100 - df_region["IgT_part"]) / df_region["IgT_part"]
         df_region["Ig"] = df_region["IgT"] * coef
         df_region["Is"] = df_region["IsT"] * coef
@@ -100,9 +102,12 @@ for region in all_regions[50:]:
         df_region["Es"] = df_region["EsT"] * coef
         df_region["Eg"] = df_region["EgT"] * coef
         
-        df_region["S"] = df_region["N"]*1000 - df_region["EsT + EgT"] - df_region["IsT"] - df_region["IgT"] - df_region["Es"] - df_region["Eg"] - df_region["Is"]- df_region["Ig"] 
-    except:
-        continue
+        df_region["S"] = pd.eval("N*1000-EsT-EgT-IsT-IgT-Es-Eg-Is-Ig", global_dict=df_region) #df_region["N"]*1000 - df_region["EsT + EgT"] - df_region["IsT"] - df_region["IgT"] - df_region["Es"] - df_region["Eg"] - df_region["Is"]- df_region["Ig"] 
+    #except:
+    #       continue
+    print(df_region["S"])   
+    #statistics collection is significantly changed in 2019
+    #thus data of 2019 year is distorted
     df_region = df_region.drop(2019)
     points = []
     values = []
@@ -113,7 +118,6 @@ for region in all_regions[50:]:
     inverse_problem_data = DataRagged(keys=p["passed_keys"], points=points, data=values)
     params["N"] = df_region["N"].iloc[0]
     model_kwargs["data_ex"] = inverse_problem_data
-    #inverse_problem_data.points==2019
     
     initial_state = dict.fromkeys(_temp_keys, np.nan)
     t_start=df_region.dropna().sort_index().index[0]
@@ -121,7 +125,8 @@ for region in all_regions[50:]:
         initial_state[key] = [df_region.dropna().sort_index().iloc[0][key]]
     model_kwargs["initial_state"] = initial_state
     model_kwargs["t_start"]=t_start 
-    try:
+    #try:
+    if True:
         print("Optuna run")
         optuna_dict, best_val = run_optuna(show_progress_bar=True, **model_kwargs)
 
@@ -146,8 +151,8 @@ for region in all_regions[50:]:
         output(str(region[1]))
         output(str(optuna_P))
         output(str(best_val))
-    except:
-        print('Failed region', region[1])
-        continue
+    #except:
+    #    print('Failed region', region[1])
+    #    continue
 
 connection.close()

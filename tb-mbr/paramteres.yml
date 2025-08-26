@@ -47,7 +47,8 @@ default_params:
   phi_p: 0.01
   tg: 0.02
   alpha: 0.1
-  non-treated: 1
+  non-treated-minus: 1
+  non-treated-plus: 1
   
   
 estim_and_bounds:
@@ -59,7 +60,8 @@ estim_and_bounds:
   phi_p: [0.5,3]
   tg: [0.001,0.1]
   alpha: [0.03,0.2]
-  non-treated: [0.25, 2]
+  non-treated-plus: [0.25, 2]
+  non-treated-minus: [0.25, 2]
 
 db_keys:
   contingents: 15
