@@ -60,8 +60,8 @@ estim_and_bounds:
   phi_p: [0.5,3]
   tg: [0.001,0.1]
   alpha: [0.03,0.2]
-  non-treated-plus: [0.25, 2]
-  non-treated-minus: [0.25, 2]
+  non-treated-plus: [0.0, 0.5]
+  non-treated-minus: [0.0, 0.5]
 
 db_keys:
   contingents: 15
