@@ -137,12 +137,14 @@ for region in all_regions[50:]:
         optuna = custom_model(params=optuna_P, **model_kwargs)
         for key in ['IgT','IsT','EsT + EgT']: #,'N'
             data = optuna[key]
-            plt.plot(data.points, data.data)
+            plt.plot(data.points, data.data, label=key)
             data2 = optuna[key[:2]]
-            plt.plot(data2.points, data2.data)
+            plt.plot(data2.points, data2.data, label=key[:2])
                         
             inv_data = inverse_problem_data[key]
-            plt.scatter(inv_data.points, inv_data.data)
+            indices = inv_data.points > t_start
+            plt.scatter(inv_data.points[indices], inv_data.data[indices], label=data)
+            plt.legend()
             plt.savefig(str(region[1])+key+'.pdf')
             plt.cla()
         output(str(region[1]))
