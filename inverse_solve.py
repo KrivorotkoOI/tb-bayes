@@ -91,8 +91,7 @@ for region in all_regions[50:]:
     
     coef = 0
     #prepare data for inverse problem and initial state
-    #try:
-    if True:
+    try:
         df_region["IsT"] = df_region["IgT"] * (100 - df_region["IgT_part"]) / df_region["IgT_part"]
         df_region["Ig"] = df_region["IgT"] * coef
         df_region["Is"] = df_region["IsT"] * coef
@@ -102,10 +101,9 @@ for region in all_regions[50:]:
         df_region["Es"] = df_region["EsT"] * coef
         df_region["Eg"] = df_region["EgT"] * coef
         
-        df_region["S"] = pd.eval("N*1000-EsT-EgT-IsT-IgT-Es-Eg-Is-Ig", global_dict=df_region) #df_region["N"]*1000 - df_region["EsT + EgT"] - df_region["IsT"] - df_region["IgT"] - df_region["Es"] - df_region["Eg"] - df_region["Is"]- df_region["Ig"] 
-    #except:
-    #       continue
-    print(df_region["S"])   
+        df_region["S"] = pd.eval("N*1000-EsT-EgT-IsT-IgT-Es-Eg-Is-Ig", global_dict=df_region) 
+    except:
+           continue
     #statistics collection is significantly changed in 2019
     #thus data of 2019 year is distorted
     df_region = df_region.drop(2019)
@@ -125,8 +123,7 @@ for region in all_regions[50:]:
         initial_state[key] = [df_region.dropna().sort_index().iloc[0][key]]
     model_kwargs["initial_state"] = initial_state
     model_kwargs["t_start"]=t_start 
-    #try:
-    if True:
+    try:
         print("Optuna run")
         optuna_dict, best_val = run_optuna(show_progress_bar=True, **model_kwargs)
 
@@ -151,8 +148,8 @@ for region in all_regions[50:]:
         output(str(region[1]))
         output(str(optuna_P))
         output(str(best_val))
-    #except:
-    #    print('Failed region', region[1])
-    #    continue
+    except:
+        print('Failed region', region[1])
+        continue
 
 connection.close()
