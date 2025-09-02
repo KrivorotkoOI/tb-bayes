@@ -3,6 +3,9 @@ import copy as copy
 import sciris as sc
 from dataclasses import dataclass
 import warnings
+from scipy.integrate import odeint
+
+#from numba import jit
 
 @dataclass
 class DataRagged:
@@ -37,7 +40,38 @@ class Data:
         else:
             return Data(keys=self.keys[key], points=self.points[key], data=self.data[:,key])
 
-def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, steps_to_save=[], **kwargs):
+
+def scipy_solver(func, init_x: dict, t_end: float, step: float, t_start=0, steps_to_save=None, func_args=()):
+    ## input :
+    # func(parameters, x_values) - function discribes the model
+    # param - system parameters
+
+    # init_x - initial system values
+    # t_start - time of start, where initial is set
+    # t_end - ending
+    # step - grid step
+    ## output :
+    # result - system vaue on grid of time points
+    # result - system vaue on grid of time points
+    T = t_end - t_start
+    Nt = int(T / step)
+    if steps_to_save is None:
+        steps_to_save = list(range(1,Nt))
+    if Nt<0:
+        step = -step
+        Nt = -Nt
+        warnings.warn('RK4: Check the step direction and start/end times. Automaticaly reversed step direction.')
+        #raise Error('Wrong step direction')
+        
+    val_temp = np.array(list(init_x.values()))
+    keys = init_x.keys()
+    
+    result = odeint(func, val_temp, np.linspace(t_start, t_end, Nt), args=func_args)
+    
+    return result
+    
+#@jit(nopython=True)
+def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, steps_to_save=None, func_args=()):
     ## input :
     # func(parameters, x_values) - function discribes the model
     # param - system parameters
@@ -50,33 +84,35 @@ def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, steps_
     # result - system vaue on grid of time points
     T = t_end - t_start
     Nt = int(T / step)
-    if len(steps_to_save)==0:
+    if steps_to_save is None:
         steps_to_save = list(range(1,Nt))
     if Nt<0:
         step = -step
         Nt = -Nt
         warnings.warn('RK4: Check the step direction and start/end times. Automaticaly reversed step direction.')
         #raise Error('Wrong step direction')
-    init_val_temp = init_x
+    val_temp = np.array(list(init_x.values()))
     keys = init_x.keys()
     
     def make_step(prev_val, func):
-        val_temp = dict(zip(keys, prev_val))
-        a1 = step * func(system_state=val_temp, t=t_start+j * step, **kwargs)
-        val_temp = dict(zip(keys, prev_val + a1 * 0.5))
-        a2 = step * func(system_state=val_temp, t=t_start+(j + 0.5) * step, **kwargs)
-        val_temp = dict(zip(keys, prev_val + a2 * 0.5))
-        a3 = step * func(system_state=val_temp, t=t_start+(j + 0.5) * step, **kwargs)
-        val_temp = dict(zip(keys, prev_val + a3))
-        a4 = step * func(system_state=val_temp, t=t_start+(j + 1.0) * step, **kwargs)
+        val_temp=prev_val
+        a1 = step * func(val_temp, t_start+j * step, *func_args)
+        val_temp = prev_val + a1 * 0.5
+        a2 = step * func(val_temp, t_start+(j + 0.5) * step, *func_args)
+        val_temp = prev_val + a2 * 0.5
+        a3 = step * func(val_temp, t_start+(j + 0.5) * step, *func_args)
+        val_temp = prev_val + a3
+        a4 = step * func(val_temp, t_start+(j + 1.0) * step, *func_args)
         result = prev_val + (a1 + 2 * a2 + 2 * a3 + a4) / 6
+        
         return result #+ jumps_data[j]
     
-    result = np.empty((len(steps_to_save), *(np.array(list(init_x.values())).shape)))
-    current_state = copy.copy(np.asarray(list(init_val_temp.values())))
+    result = np.empty((len(steps_to_save), *(val_temp.shape)))
+    current_state = copy.copy(val_temp)
     i=0
     for j in range(1, Nt + 1):
         current_state = make_step(current_state, func=func)
+        
         if j == steps_to_save[i]:
              result[i] = copy.copy(current_state)
              i += 1
@@ -104,50 +140,11 @@ def eval_grads(derivatives_strings: dict, **kwargs,):
     return res
 
 
-def euler(func, init_x: dict, t_end: float, step: float, t_start=0, jumps_data = None, **kwargs):
-    ## input :
-    # func(parameters, x_values) - function discribes the model
-    # param - system parameters
-
-    # init_x - initial system values
-    # t_start - time of start, where initial is set
-    # t_end - ending 
-    # step - grid step
-    ## output :
-    # result - system vaue on grid of time points
-    
-    T = t_end - t_start
-    Nt = int(T / step)
-    if Nt<0:
-        step = -step
-        Nt = -Nt
-        warnings.warn('RK4: Check the step direction and start/end times. Automaticaly reversed step direction.')
-        #raise Error('Wrong step direction')
-    # init_val_temp = np.fromiter(init_x.values(), np.float32)
-    init_val_temp = init_x
-    keys = init_x.keys()
-    result = np.zeros((len(init_x), Nt + 1))
-    result[:, 0] = np.fromiter(init_val_temp.values(), np.float32)
-    
-    jumps= np.zeros(result.shape)
-    if jumps_data:
-        for i, key in enumerate(jumps_data.keys):
-            ind = sc.findinds(jumps_data.keys, key)[0]
-            jumps[ind] = jumps_data.data[i]
-    def f_jumps(t):
-        return jumps[:,int((t_start-t)/step)]
-
-    for j in range(1, Nt + 1):
-        #print(Nt, j)
-        val_temp = dict(zip(keys, result[:, j - 1]))
-        result[:, j] = result[:, j - 1] + step*func(system_state=val_temp, t=t_start+(j) * step, **kwargs) + f_jumps(t=t_start+(j)*step)
-    return result
-
 
 def precompile_model(
     equation_strings: dict,
     custom_vars: dict = {},
-    **kwargs):
+    ):
     
     _custom_vars = copy.copy(custom_vars)
     for key in _custom_vars.keys():
@@ -163,6 +160,12 @@ def precompile_model(
             raise TypeError("The problem with eq string: " + key + " : " + equation_strings[key])
     return equation_strings, _custom_vars
 
+
+def ode_model_wrapped(x,t, *args):
+    params, equation_strings, custom_vars, multistart = args
+    system_state = dict(zip(equation_strings.keys(), x))
+    return ode_model(equation_strings, system_state, params, t, custom_vars, multistart)[:,0]
+
 def ode_model(
     equation_strings: dict,
     system_state: dict,
@@ -170,7 +173,6 @@ def ode_model(
     t: float = 0,
     custom_vars: dict = {},
     multistart=1, #number of parallel initial conditions with different parameters
-    **kwargs,
 ):
     ## input :
     # param - system parameters
@@ -180,7 +182,7 @@ def ode_model(
     # result - system values at indicated time point
 
     _custom_vars = copy.copy(custom_vars)
-    aliases_dict = params | system_state | {"t": t} | kwargs | {"sc":sc}
+    aliases_dict = params | system_state | {"t": t} | {"sc":sc}
     for key in _custom_vars.keys():
         try:
             _custom_vars[key] = eval(_custom_vars[key], aliases_dict)
@@ -201,11 +203,20 @@ def ode_model(
     return np.array(result)
 
 
-def ode_solve(params, initial_state, t_end, equation_strings, custom_vars={}, t_start=0,solver=rungekutta4, **kwargs):
+def ode_solve(params, initial_state, t_end, step, equation_strings, custom_vars={}, t_start=0, solver=scipy_solver, **kwargs):
     #equation_strings, custom_vars = precompile_model(equation_strings, custom_vars)
-    multistart = len(list(initial_state.values())[0])
-    data = np.array(
-        solver(func=ode_model, params=params, init_x=initial_state, t_end=t_end, t_start=t_start, equation_strings=equation_strings, custom_vars=custom_vars, multistart=multistart, **kwargs)
+    try:
+        multistart = len(list(initial_state.values())[0])
+    except:
+        multistart = 1
+    data = np.array(solver(func=ode_model_wrapped,#ode_model, 
+                init_x=initial_state, 
+                t_end=t_end, 
+                t_start=t_start, 
+                step=step,
+                func_args=(params, equation_strings, custom_vars, multistart),
+                #**kwargs
+                )
     )
     points = np.array([
         np.linspace(t_start, t_end, num=data.shape[0], endpoint=True) for _ in range(data.shape[1])
@@ -214,7 +225,7 @@ def ode_solve(params, initial_state, t_end, equation_strings, custom_vars={}, t_
     return Data(keys, points, data)
 
 
-def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None, **kwargs):
+def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None):
     ## input :
     # data_pred - predicted data
     # data_ex - exact data
@@ -258,7 +269,7 @@ def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None, **kwargs):
     # return np.sum((data_pred.data - data_ex.data)**2, (0,1))
 
 
-def objective(data_ex: Data, model, default_params, trial_params, **kwargs):
+def objective(data_ex: Data, model, default_params, trial_params):
     ## input :
     # data_ex - exact data
 
@@ -267,10 +278,10 @@ def objective(data_ex: Data, model, default_params, trial_params, **kwargs):
 
     params = copy.copy(default_params)
     params.update(trial_params)
-    prediction = model(params=params, **kwargs)
+    prediction = model(params=params)
     normed_pred = prediction  # prediction/np.asarray([np.max(prediction, prediction.shape[-1]).T]).T
     normed_ex = data_ex  # data_ex/np.asarray([np.max(data_ex, data_ex.shape[-1]).T]).T
-    return loss_func(normed_pred, normed_ex, **kwargs)
+    return loss_func(normed_pred, normed_ex)
 
 
 def ode_objective(**kwargs):

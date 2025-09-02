@@ -3,7 +3,7 @@ import yaml
 import matplotlib.pyplot as plt
 import pandas as pd
 from copy import deepcopy as copy
-from model import Data, ode_objective, ode_solve, euler, eval_grads, precompile_model
+from model import Data, ode_objective, ode_solve, eval_grads, precompile_model
 import sciris as sc
 
 with open("tb-mbr/paramteres.yml", "r", encoding="utf8") as file:
@@ -14,16 +14,9 @@ def output(string: str):
         file.write(string + "\n")
 
 
-n=3 #number of various initial states
-
 initial_state = p["initial_state"]
-for key in initial_state.keys():
-    #for i, val in enumerate(initial_state[key]):
-        initial_state[key] = [initial_state[key]]*n
 params = p["default_params"]
 
-for key in params.keys():
-    params[key] = np.array([i/n*params[key] for i in range(1,n+1)])
 print(initial_state)
 t_start = 2009
 modelling_time = 10
