@@ -7,8 +7,8 @@ from scipy.integrate import odeint
 
 @dataclass
 class DataRagged:
-    keys: np.ndarray  # list
-    points: np.ndarray  # list
+    keys: np.ndarray
+    points: np.ndarray
     data: np.ndarray
         
     def __getitem__(self, key):
@@ -20,8 +20,8 @@ class DataRagged:
 
 @dataclass
 class Data:
-    keys: np.ndarray  # list
-    points: np.ndarray  # list
+    keys: np.ndarray
+    points: np.ndarray
     data: np.ndarray
     
     def __setitem__(self, key, value):
@@ -59,7 +59,9 @@ def scipy_solver(func, init_x: dict, t_end: float, step: float, t_start=0, solve
         warnings.warn('ODE INT: Check the step direction and start/end times. Automaticaly reversed step direction.')
         #raise Error('Wrong step direction')
     val_temp = np.array(list(init_x.values()))
+    
     result = odeint(func, val_temp, np.linspace(t_start, t_end, Nt), args=func_args)
+    
     return result
     
 def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, solver_args=(), func_args=()):
@@ -97,19 +99,19 @@ def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, solver
         result = prev_val + (a1 + 2 * a2 + 2 * a3 + a4) / 6
         return result #+ jumps_data[j]
     
-    result_to_save = np.empty((len(steps_to_save), *(val_temp.shape)))
+    result = np.empty((len(steps_to_save), *(val_temp.shape)))
     current_state = copy.copy(val_temp)
     i=0
     for j in range(1, Nt + 1):
         current_state = copy.copy(make_step(current_state, func=func))
         if j == steps_to_save[i]:
-             result_to_save[i] = copy.copy(current_state)
+             result[i] = copy.copy(current_state)
              i += 1
              try:
                    steps_to_save[i]
              except:
                    break
-    return result_to_save
+    return result
 
 
 def integrate(func, step, t_start, t_end, **kwargs):
@@ -178,10 +180,6 @@ def ode_model(
             print("The problem with custom var: " + key + " : " + _custom_vars[key])
             raise TypeError
     
-    #if multistart is not None:
-    #    result = np.zeros((len(equation_strings), multistart))
-    #else:
-    #    result = np.zeros(len(equation_strings))
     result = None
     for i, val in enumerate(equation_strings.values()):
         try:
@@ -251,8 +249,6 @@ def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None):
         s = min((step,step2))
         inds = list(map(lambda x: np.any(np.abs(x-data_ex.points[i])<s), data_pred.points[i]))
         inds2 = list(map(lambda x: np.any(np.abs(x-data_pred.points[i])<s), data_ex.points[i]))
-        #print(np.sum(inds2))
-        #print(np.sum(inds))
         dp = np.array(data_ex.data[i])[inds2]
         # dp_n = np.sqrt(np.sum(dp*dp))
         dp_n = np.sum(np.abs(dp) ** 2)
@@ -261,8 +257,6 @@ def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None):
         #dp_n = np.sum(np.abs(dp))
         #target_sum += np.sum(np.abs(data_pred.data[inds,i].T - dp).T) / dp_n
     return target_sum
-    # return np.sum((data_pred.data - data_ex.data)**2, (0,1))
-
 
 def objective(data_ex: Data, model, default_params, trial_params, **kwargs):
     ## input :
@@ -274,9 +268,7 @@ def objective(data_ex: Data, model, default_params, trial_params, **kwargs):
     params = copy.copy(default_params)
     params.update(trial_params)
     prediction = model(params=params, **kwargs)
-    normed_pred = prediction  # prediction/np.asarray([np.max(prediction, prediction.shape[-1]).T]).T
-    normed_ex = data_ex  # data_ex/np.asarray([np.max(data_ex, data_ex.shape[-1]).T]).T
-    return loss_func(normed_pred, normed_ex)
+    return loss_func(prediction, data_ex)
 
 
 def ode_objective(**kwargs):

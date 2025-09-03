@@ -6,7 +6,6 @@ import SALib as sa
 import yaml
 from copy import deepcopy as copy
 from model import Data, ode_solve, rungekutta4, precompile_model
-#import sciris as sc
 
 with open("tb-mbr/paramteres.yml", "r", encoding="utf8") as file:
     p = yaml.safe_load(file)
@@ -39,7 +38,6 @@ model_kwargs = {
     "steps_to_save":steps_to_save,
 } | p["model_kwargs"]
 
-#results = ode_solve(params=params, **model_kwargs)
 equation_strings, custom_vars = precompile_model(model_kwargs['equation_strings'], model_kwargs['custom_vars'])
 model_kwargs['custom_vars']=custom_vars
 model_kwargs['equation_strings']=equation_strings
@@ -68,7 +66,6 @@ from SALib import ProblemSpec
 sp = ProblemSpec({
     'names': names,
     'bounds': bounds
-    #'dists': ['triang']*3
 })
 
 import time
@@ -85,7 +82,6 @@ print(time.time() - start_time)
 
 
 x = np.linspace(0,modelling_time,len(steps_to_save))
-#x = np.linspace(0,modelling_time, int((t_end-t_start)/step+1))
 # Get first order sensitivities for all outputs
 S1s = np.array([sp.analysis[_y]['S1'] for _y in sp['outputs']])
 
@@ -104,8 +100,6 @@ ax1 = fig.add_subplot(gs[:,1])
 for i, ax in enumerate([ax1]):
     for j, name in enumerate(names):
         ax.plot(x, S1s[:, j],
-            #label=r'S1$_\mathregular{{{}}}$'.format(problem["names"][i]),
-            #color='black', 
             label=name)
     ax.set_xlabel("x")
     ax.set_ylabel("First-order Sobol index")
@@ -130,7 +124,6 @@ ax0.fill_between(x,
 
 ax0.set_xlabel("x")
 ax0.set_ylabel("y")
-ax0.legend(#title=r"$y=a+b\cdot x^2$",
-           loc='upper center')._legend_box.align = "left"
+ax0.legend(loc='upper center')._legend_box.align = "left"
 plt.savefig(compartment+'.pdf')
 plt.show()

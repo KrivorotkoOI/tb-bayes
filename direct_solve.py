@@ -67,13 +67,11 @@ plt.show()
 for key in ['EsT','Es', 'IsT', 'Is']:#key = 's'
     plotting(key)
 plt.legend()
-#plt.yscale('log')
 plt.show()
 
 for key in ['EgT','Eg', 'IgT', 'Ig']:#key = 's'
     plotting(key)
 plt.legend()
-#plt.yscale('log')
 plt.show()
 
 
@@ -81,5 +79,3 @@ plt.show()
 
 print(results[key].points, results[key].data)
 print('solved direct')
-    
-#connection.close()
