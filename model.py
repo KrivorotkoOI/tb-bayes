@@ -5,8 +5,6 @@ from dataclasses import dataclass
 import warnings
 from scipy.integrate import odeint
 
-#from numba import jit
-
 @dataclass
 class DataRagged:
     keys: np.ndarray  # list
@@ -64,7 +62,6 @@ def scipy_solver(func, init_x: dict, t_end: float, step: float, t_start=0, solve
     result = odeint(func, val_temp, np.linspace(t_start, t_end, Nt), args=func_args)
     return result
     
-#@jit(nopython=True)
 def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, solver_args=(), func_args=()):
     ## input :
     # func(parameters, x_values) - function discribes the model
@@ -80,7 +77,7 @@ def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, solver
     T = t_end - t_start
     Nt = int(T / step)
     if steps_to_save is None:
-        steps_to_save = list(range(0,Nt))
+        steps_to_save = list(range(1,Nt))
     if Nt<0:
         step = -step
         Nt = -Nt
@@ -98,15 +95,13 @@ def rungekutta4(func, init_x: dict, t_end: float, step: float, t_start=0, solver
         val_temp = prev_val + a3
         a4 = step * func(val_temp, t_start+(j + 1.0) * step, *func_args)
         result = prev_val + (a1 + 2 * a2 + 2 * a3 + a4) / 6
-        
         return result #+ jumps_data[j]
     
     result_to_save = np.empty((len(steps_to_save), *(val_temp.shape)))
     current_state = copy.copy(val_temp)
     i=0
     for j in range(1, Nt + 1):
-        current_state = make_step(current_state, func=func)
-        
+        current_state = copy.copy(make_step(current_state, func=func))
         if j == steps_to_save[i]:
              result_to_save[i] = copy.copy(current_state)
              i += 1
@@ -132,7 +127,6 @@ def eval_grads(derivatives_strings: dict, **kwargs,):
         print(string)
         res[i] = integrate(lambda t, **kw: eval(string, kwargs | {'t':t}), **kwargs)
     return res
-
 
 
 def precompile_model(
@@ -166,8 +160,7 @@ def ode_model(
     params: dict = {},
     equation_strings: dict = {},
     custom_vars: dict = {},
-    
-    
+    multistart=None,
 ):
     ## input :
     # param - system parameters
@@ -184,17 +177,30 @@ def ode_model(
         except TypeError:
             print("The problem with custom var: " + key + " : " + _custom_vars[key])
             raise TypeError
-
-    result = np.zeros(len(equation_strings))
     
+    #if multistart is not None:
+    #    result = np.zeros((len(equation_strings), multistart))
+    #else:
+    #    result = np.zeros(len(equation_strings))
+    
+    result = None
     for i, val in enumerate(equation_strings.values()):
         try:
-            result[i] = eval(val, aliases_dict | _custom_vars)
+            v = eval(val, aliases_dict | _custom_vars)
+            if result is None:
+                if len(v)==1:
+                    result = np.zeros(len(equation_strings))
+                else:
+                    result = np.zeros((len(equation_strings), *v.shape))
+            else:
+                result[i] = v
             if np.isnan(result[i]).any():
                 pass
                 #raise ValueError("The solution is nan: " + list(equation_strings.keys())[i] + " : " + val)
         except TypeError:
             raise TypeError("The problem with eq string: " + list(equation_strings.keys())[i] + " : " + val)
+        #except ValueError:
+        #    raise ValueError("The problem with eq string: " + list(equation_strings.keys())[i])
     return np.array(result)
 
 
