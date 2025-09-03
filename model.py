@@ -8,7 +8,7 @@ from scipy.integrate import odeint
 @dataclass
 class DataRagged:
     keys: np.ndarray  # list
-    points: np.ndarray  # list  # np.ndarray
+    points: np.ndarray  # list
     data: np.ndarray
         
     def __getitem__(self, key):
@@ -21,7 +21,7 @@ class DataRagged:
 @dataclass
 class Data:
     keys: np.ndarray  # list
-    points: np.ndarray  # list  # np.ndarray
+    points: np.ndarray  # list
     data: np.ndarray
     
     def __setitem__(self, key, value):
@@ -264,7 +264,7 @@ def loss_func(data_pred: Data, data_ex: Data, loss_custom_funcs=None):
     # return np.sum((data_pred.data - data_ex.data)**2, (0,1))
 
 
-def objective(data_ex: Data, model, default_params, trial_params):
+def objective(data_ex: Data, model, default_params, trial_params, **kwargs):
     ## input :
     # data_ex - exact data
 
@@ -273,7 +273,7 @@ def objective(data_ex: Data, model, default_params, trial_params):
 
     params = copy.copy(default_params)
     params.update(trial_params)
-    prediction = model(params=params)
+    prediction = model(params=params, **kwargs)
     normed_pred = prediction  # prediction/np.asarray([np.max(prediction, prediction.shape[-1]).T]).T
     normed_ex = data_ex  # data_ex/np.asarray([np.max(data_ex, data_ex.shape[-1]).T]).T
     return loss_func(normed_pred, normed_ex)

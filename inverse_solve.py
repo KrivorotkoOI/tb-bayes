@@ -3,7 +3,7 @@ import yaml
 import matplotlib.pyplot as plt
 import pandas as pd
 from copy import deepcopy as copy
-from model import Data, DataRagged, objective, ode_model, ode_solve, precompile_model, loss_func
+from model import Data, DataRagged, objective, rungekutta4, ode_solve, precompile_model, loss_func
 from optuna_optimiser import run_optuna
 
 import sqlite3
@@ -30,7 +30,7 @@ def custom_model(initial_state, params, **kwargs):
     initial_state["Eg"] = np.array(initial_state["EgT"]) * coef_minus
     initial_state["Is"] = np.array(initial_state["IsT"]) * coef_plus
     initial_state["Ig"] = np.array(initial_state["IgT"]) * coef_plus
-    res = ode_solve(initial_state=initial_state, params=params, **kwargs)
+    res = ode_solve(initial_state=initial_state, solver=rungekutta4, params=params, **kwargs)
     res["EsT + EgT"] = Data(data=res["EsT"].data + res["EgT"].data, points=res["EgT"].points, keys=["ET"])
     #res["N"] = Data(data=(res["EsT + EgT"].data + res["IgT"].data + res["IsT"].data + res["Ig"].data + res["Is"].data 
     #                + res["Eg"].data + res["Es"].data + res["S"].data)/1000, points=res["EgT"].points, keys=["N"])
@@ -49,7 +49,7 @@ model_kwargs = {
         "objective": custom_objective,#ode_objective,
         "estimation_bounds": estimation_bounds,
         "n_workers": 10,
-        "n_trials": 700,
+        "n_trials": 200,
     } | p["model_kwargs"]
 
 #precompile equation strings for faster evaluation
@@ -125,7 +125,7 @@ for region in all_regions[50:]:
     model_kwargs["t_start"]=t_start 
     try:
         print("Optuna run")
-        optuna_dict, best_val = run_optuna(show_progress_bar=True, **model_kwargs)
+        optuna_dict, best_val = run_optuna(**model_kwargs)
 
         optuna_P = params.copy()
         for key in estimation_bounds.keys():
