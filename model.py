@@ -182,13 +182,12 @@ def ode_model(
     #    result = np.zeros((len(equation_strings), multistart))
     #else:
     #    result = np.zeros(len(equation_strings))
-    
     result = None
     for i, val in enumerate(equation_strings.values()):
         try:
             v = eval(val, aliases_dict | _custom_vars)
             if result is None:
-                if len(v)==1:
+                if isinstance(v, float):
                     result = np.zeros(len(equation_strings))
                 else:
                     result = np.zeros((len(equation_strings), *v.shape))
