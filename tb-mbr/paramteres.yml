@@ -2,10 +2,10 @@ model_kwargs:
 #ODE model right side
   equation_strings:
     S:   "- beta*S*(Is+Ig)/N                            + gamma_1*(EgT+IgT)+ gamma_2*(EsT+IsT)   - mu*S + b*N-m*N**2"
-    Es:  "  beta*S*Is/N     - phi_m*Es - Es*(tg + beta/N*Ig)  - omega*Es                            - mu*Es"
-    Eg:  "  beta*S*Ig/N     - phi_m*Eg + Es*(tg + beta/N*Ig)  - omega*Eg                            - mu*Eg"
-    Is:  "                  - phi_p*Is - Is*(tg + beta/N*Ig)  + omega*Es                            - (alpha+mu)*Is"
-    Ig:  "                  - phi_p*Ig + Is*(tg + beta/N*Ig)  + omega*Eg                            - (alpha+mu)*Ig"
+    Es:  "  beta*S*Is/N     - phi_m*Es - Es*(beta/N*Ig)  - omega*Es                            - mu*Es"
+    Eg:  "  beta*S*Ig/N     - phi_m*Eg + Es*(beta/N*Ig)  - omega*Eg                            - mu*Eg"
+    Is:  "                  - phi_p*Is - Is*(beta/N*Ig)  + omega*Es                            - (alpha+mu)*Is"
+    Ig:  "                  - phi_p*Ig + Is*(beta/N*Ig)  + omega*Eg                            - (alpha+mu)*Ig"
     EsT: "                    phi_m*Es - EsT*(tg + beta/N*Ig) - gamma_2*EsT + gamma_2*IsT           - mu*EsT"
     EgT: "                    phi_m*Eg + EsT*(tg + beta/N*Ig) - gamma_1*EgT + gamma_1*IgT           - mu*EgT"
     IsT: "                    phi_p*Is - IsT*(tg + beta/N*Ig) - 2*gamma_2*IsT                       - (alpha+mu)*IsT"
