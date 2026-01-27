@@ -24,5 +24,11 @@ To run inverse problem solution run
 ```
 python inverse_solve.py
 ```
+(database required)
 
+To run probabilistic modeling using a Bayesian approach:
+
+```
+python probabilistic_modeling_pymc.py
+```
 (database required)
