@@ -143,8 +143,10 @@ def precompile_model(
 ):
     _custom_vars = copy.copy(custom_vars)
     for key in _custom_vars.keys():
+        if _custom_vars[key].split(" ")[0] != 'lambda':
+            _custom_vars[key] = _custom_vars[key].replace(" ", "")
         try:
-            _custom_vars[key] = compile(_custom_vars[key].replace(" ", ""), "<string>", "eval",
+            _custom_vars[key] = compile(_custom_vars[key], "<string>", "eval",
                                         optimize=1)  # eval(_custom_vars[key], aliases_dict)
         except TypeError:
             print("The problem with custom var: " + key + " : " + _custom_vars[key])
@@ -182,22 +184,22 @@ def ode_model(
     _custom_vars = copy.copy(custom_vars)
     aliases_dict = params | system_state | {"t": t} | {"sc": sc}
     for key in _custom_vars.keys():
-        try:
-            _custom_vars[key] = eval(_custom_vars[key], aliases_dict)
-        except TypeError:
-            print("The problem with custom var: " + key + " : " + _custom_vars[key])
-            raise TypeError
+        #try:
+            _custom_vars[key] = eval(_custom_vars[key], aliases_dict | _custom_vars)
+        #except TypeError:
+        #    print("The problem with custom var: " + key + " : " + _custom_vars[key])
+        #    raise TypeError
 
     result = np.zeros(len(equation_strings))
 
     for i, val in enumerate(equation_strings.values()):
-        try:
-            result[i] = eval(val, aliases_dict | _custom_vars)
+        #try:
+            result[i] = eval(val, aliases_dict | _custom_vars )
             if np.isnan(result[i]).any():
                 pass
                 # raise ValueError("The solution is nan: " + list(equation_strings.keys())[i] + " : " + val)
-        except TypeError:
-            raise TypeError("The problem with eq string: " + list(equation_strings.keys())[i] + " : " + val)
+        #except TypeError:
+        #    raise TypeError("The problem with eq string: " + list(equation_strings.keys())[i] + " : " + val)
     return np.array(result)
 
 

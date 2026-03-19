@@ -5,6 +5,7 @@ import pandas as pd
 from copy import deepcopy as copy
 from model import Data, ode_objective, ode_solve, eval_grads, precompile_model
 import sciris as sc
+from collections import defaultdict
 
 with open("tb-mbr/paramteres.yml", "r", encoding="utf8") as file:
     p = yaml.safe_load(file)
@@ -35,9 +36,16 @@ model_kwargs = {
     "steps_to_save":steps_to_save,
 } | p["model_kwargs"]
 
+region_par_file = 'data_and_misc/zab-pars.csv'
+region_pars = pd.read_csv(region_par_file, index_col=0)
+params['for_mu'] = region_pars['mu']/1000
+params['for_b'] = region_pars['b']/1000
+
 equation_strings, custom_vars = precompile_model(model_kwargs['equation_strings'], model_kwargs['custom_vars'])
 model_kwargs['equation_strings'] = equation_strings
 model_kwargs['custom_vars'] = custom_vars
+
+
 
 results = ode_solve(params=params, **model_kwargs)
 
@@ -73,9 +81,6 @@ for key in ['EgT','Eg', 'IgT', 'Ig']:#key = 's'
     plotting(key)
 plt.legend()
 plt.show()
-
-
-    
 
 print(results[key].points, results[key].data)
 print('solved direct')
