@@ -36,7 +36,7 @@ model_kwargs = {
     "steps_to_save":steps_to_save,
 } | p["model_kwargs"]
 
-region_par_file = 'data_and_misc/zab-pars.csv'
+region_par_file = 'data_and_misc/nsk-pars.csv'
 region_pars = pd.read_csv(region_par_file, index_col=0)
 params['for_mu'] = region_pars['mu']/1000
 params['for_b'] = region_pars['b']/1000

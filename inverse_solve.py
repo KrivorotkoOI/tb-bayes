@@ -64,7 +64,13 @@ cursor = connection.cursor()
 cursor.execute("SELECT * from 'Reg'")
 all_regions = cursor.fetchall()
 
-for region in all_regions[50:]:
+#regions_dict = {75: 'Республика Тыва', 
+#              77: 'Алтайский край', 79: 'Иркутская область', 81: 'Новосибирская область', 87: 'Забайкальский край'}
+              
+              
+regions = ((75, 'Республика Тыва', 'tyva'), (77, 'Алтайский край', 'alt'),(79, 'Иркутская область', 'irk'),(81, 'Новосибирская область', 'nsk'),(87, 'Забайкальский край', 'zab'))
+
+for region in regions:#all_regions[50:]:
     #collect needed data for current region
     cursor.execute(
         "SELECT Year, ParameterID, value from Data WHERE RegionID = " + str(region[0])
@@ -88,6 +94,10 @@ for region in all_regions[50:]:
     except KeyError:
         print('There is missing data for chosen region ' + str(region))
         continue
+    
+    changing_paramters = pd.read_csv('data_and_misc/'+region[2]+'-pars.csv')
+    params['for_mu'] = changing_paramters['mu']
+    params['for_b'] = changing_paramters['b']
     
     coef = 0
     #prepare data for inverse problem and initial state
