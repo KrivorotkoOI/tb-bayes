@@ -3,7 +3,7 @@ import yaml
 import matplotlib.pyplot as plt
 import pandas as pd
 from copy import deepcopy as copy
-from model import Data, DataRagged, objective, rungekutta4, ode_solve, precompile_model, loss_func
+from model import Data, DataRagged, objective, rungekutta4, scipy_solver, ode_solve, precompile_model, loss_func
 from optuna_optimiser import run_optuna
 
 import sqlite3
@@ -30,7 +30,8 @@ def custom_model(initial_state, params, **kwargs):
     initial_state["Eg"] = np.array(initial_state["EgT"]) * coef_minus
     initial_state["Is"] = np.array(initial_state["IsT"]) * coef_plus
     initial_state["Ig"] = np.array(initial_state["IgT"]) * coef_plus
-    res = ode_solve(initial_state=initial_state, solver=rungekutta4, params=params, **kwargs)
+    res = ode_solve(initial_state=initial_state, solver=scipy_solver, params=params, **kwargs)
+    #res = ode_solve(initial_state=initial_state, solver=rungekutta4, params=params, **kwargs)
     res["EsT + EgT"] = Data(data=res["EsT"].data + res["EgT"].data, points=res["EgT"].points, keys=["ET"])
     #res["N"] = Data(data=(res["EsT + EgT"].data + res["IgT"].data + res["IsT"].data + res["Ig"].data + res["Is"].data 
     #                + res["Eg"].data + res["Es"].data + res["S"].data)/1000, points=res["EgT"].points, keys=["N"])
@@ -48,7 +49,7 @@ model_kwargs = {
         "default_params": params,
         "objective": custom_objective,#ode_objective,
         "estimation_bounds": estimation_bounds,
-        "n_workers": 10,
+        "n_workers": 8,
         "n_trials": 200,
     } | p["model_kwargs"]
 
@@ -64,10 +65,6 @@ cursor = connection.cursor()
 cursor.execute("SELECT * from 'Reg'")
 all_regions = cursor.fetchall()
 
-#regions_dict = {75: 'Республика Тыва', 
-#              77: 'Алтайский край', 79: 'Иркутская область', 81: 'Новосибирская область', 87: 'Забайкальский край'}
-              
-              
 regions = ((75, 'Республика Тыва', 'tyva'), (77, 'Алтайский край', 'alt'),(79, 'Иркутская область', 'irk'),(81, 'Новосибирская область', 'nsk'),(87, 'Забайкальский край', 'zab'))
 
 for region in regions:#all_regions[50:]:
@@ -95,9 +92,9 @@ for region in regions:#all_regions[50:]:
         print('There is missing data for chosen region ' + str(region))
         continue
     
-    changing_paramters = pd.read_csv('data_and_misc/'+region[2]+'-pars.csv')
-    params['for_mu'] = changing_paramters['mu']
-    params['for_b'] = changing_paramters['b']
+    changing_paramters = pd.read_csv('data_and_misc/'+region[2]+'-pars.csv', index_col=0)
+    params['for_mu'] = changing_paramters['mu']/1000
+    params['for_b'] = changing_paramters['b']/1000
     
     coef = 0
     #prepare data for inverse problem and initial state
@@ -133,7 +130,8 @@ for region in regions:#all_regions[50:]:
         initial_state[key] = [df_region.dropna().sort_index().iloc[0][key]]
     model_kwargs["initial_state"] = initial_state
     model_kwargs["t_start"]=t_start 
-    try:
+    if True:
+    #try:
         print("Optuna run")
         optuna_dict, best_val = run_optuna(**model_kwargs)
 
@@ -153,15 +151,15 @@ for region in regions:#all_regions[50:]:
                         
             inv_data = inverse_problem_data[key]
             indices = inv_data.points > t_start
-            plt.scatter(inv_data.points[indices], inv_data.data[indices], label=data)
+            plt.scatter(np.array(inv_data.points)[indices], np.array(inv_data.data)[indices], label=data)
             plt.legend()
             plt.savefig(str(region[1])+key+'.pdf')
             plt.cla()
         output(str(region[1]))
         output(str(optuna_P))
         output(str(best_val))
-    except:
-        print('Failed region', region[1])
-        continue
+    #except:
+    #    print('Failed region', region[1])
+    #    continue
 
 connection.close()

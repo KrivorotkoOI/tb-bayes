@@ -61,7 +61,7 @@ def scipy_solver(func, init_x: dict, t_end: float, step: float, t_start=0, solve
         Nt = -Nt
         warnings.warn('ODE INT: Check the step direction and start/end times. Automaticaly reversed step direction.')
         # raise Error('Wrong step direction')
-    val_temp = np.array(list(init_x.values()))
+    val_temp = np.ravel(np.array(list(init_x.values())))
     result = odeint(func, val_temp, np.linspace(t_start, t_end, Nt), args=func_args)
     return result
 
@@ -191,7 +191,7 @@ def ode_model(
         #    raise TypeError
 
     result = np.zeros(len(equation_strings))
-
+    
     for i, val in enumerate(equation_strings.values()):
         #try:
             result[i] = eval(val, aliases_dict | _custom_vars )
@@ -204,7 +204,7 @@ def ode_model(
 
 
 def ode_solve(params, initial_state, t_end, step, equation_strings, custom_vars={}, t_start=0, solver=scipy_solver,
-              steps_to_save=None):
+              steps_to_save=None, **kwargs):
     data = np.array(solver(func=ode_model_wrapped,
                            init_x=initial_state,
                            t_end=t_end,
