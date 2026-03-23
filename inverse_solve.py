@@ -48,7 +48,7 @@ model_kwargs = {
         "default_params": params,
         "objective": custom_objective,#ode_objective,
         "estimation_bounds": estimation_bounds,
-        "n_workers": 10,
+        "n_workers": 1,
         "n_trials": 200,
     } | p["model_kwargs"]
 
@@ -63,13 +63,13 @@ connection = sqlite3.connect(db_filename)
 cursor = connection.cursor()
 cursor.execute("SELECT * from 'Reg'")
 all_regions = cursor.fetchall()
-
 #regions_dict = {75: 'Республика Тыва', 
 #              77: 'Алтайский край', 79: 'Иркутская область', 81: 'Новосибирская область', 87: 'Забайкальский край'}
               
               
-regions = ((75, 'Республика Тыва', 'tyva'), (77, 'Алтайский край', 'alt'),(79, 'Иркутская область', 'irk'),(81, 'Новосибирская область', 'nsk'),(87, 'Забайкальский край', 'zab'))
+regions = ((75, 'Республика Тыва', 'tyva'), (74, 'Республика Алтай', 'alt'),(79, 'Иркутская область', 'irk'),(81, 'Новосибирская область', 'nsk'),(87, 'Забайкальский край', 'zab'))
 
+regions = [(74, 'Республика Алтай', 'alt')]
 for region in regions:#all_regions[50:]:
     #collect needed data for current region
     cursor.execute(
@@ -133,7 +133,8 @@ for region in regions:#all_regions[50:]:
         initial_state[key] = [df_region.dropna().sort_index().iloc[0][key]]
     model_kwargs["initial_state"] = initial_state
     model_kwargs["t_start"]=t_start 
-    try:
+    if True:
+    #try:
         print("Optuna run")
         optuna_dict, best_val = run_optuna(**model_kwargs)
 
@@ -160,7 +161,7 @@ for region in regions:#all_regions[50:]:
         output(str(region[1]))
         output(str(optuna_P))
         output(str(best_val))
-    except:
+    #except:
         print('Failed region', region[1])
         continue
 

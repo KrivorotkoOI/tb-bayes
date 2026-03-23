@@ -52,7 +52,10 @@ def run_optuna(n_workers: int = 6, n_trials: int = 200, **kwargs):
     # Run the optimization
     t0 = sc.tic()
     make_study(db=g)
-    run_workers(db=g, **kwargs)
+    if n_workers==1:
+        worker(db=g, **kwargs)
+    else:
+        run_workers(db=g, **kwargs)
     study = op.load_study(storage=g.storage, study_name=g.name)
     params_optuna = study.best_params
     T = sc.toc(t0, output=True)
