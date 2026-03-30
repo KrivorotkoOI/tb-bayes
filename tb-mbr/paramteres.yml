@@ -14,10 +14,10 @@ model_kwargs:
 #ODE model aliases
   custom_vars:
     N: 'S+Es+Eg+Is+Ig+EsT+EgT+IsT+IgT'
-    mu: 'lambda t: for_mu[min(int(t), 2020)]'
-    b: 'lambda t: for_b[min(int(t), 2020)]'
+    mu: 'lambda t: for_mu[min(int(t), 2022)]'
+    b: 'lambda t: for_b[min(int(t), 2022)]'
     m: 'lambda t: (b(t)-mu(t))/k'
-  #t_start: 2007
+  #t_start: 2009
   t_end: 2023
   step: 0.005
 #ODE model initial state
