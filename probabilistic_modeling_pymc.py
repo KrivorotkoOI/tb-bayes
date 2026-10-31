@@ -1,8 +1,21 @@
+import os, sys
+
+env = os.path.dirname(sys.executable)  # ...\envs\pymc_env
+extra = [
+    env,
+    os.path.join(env, "Library", "mingw-w64", "bin"),
+    os.path.join(env, "Library", "usr", "bin"),
+    os.path.join(env, "Library", "bin"),
+    os.path.join(env, "Scripts"),
+]
+os.environ["PATH"] = os.pathsep.join(extra + [os.environ.get("PATH", "")])
+os.environ["CONDA_PREFIX"] = env
+
 import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pymc as pm
-from pytensor.compile.ops import as_op
+from pytensor.compile.ops import wrap_py
 import pytensor.tensor as pt
 import arviz as az
 import sqlite3
@@ -10,12 +23,12 @@ import pandas as pd
 import yaml
 from pathlib import Path
 
-from model import Data, DataRagged, objective, ode_model, ode_solve, precompile_model, loss_func
+from model import Data, ode_solve, precompile_model
 
 with open("tb-mbr/paramteres.yml", "r", encoding="utf8") as file:
     p = yaml.safe_load(file)
 
-@as_op(itypes=[pt.dvector], otypes=[pt.dmatrix])
+@wrap_py(itypes=[pt.dvector], otypes=[pt.dmatrix])
 def pytensor_forward_model_matrix(theta):
     params['beta'] = theta[0]
     params['gamma_1'] = theta[1]
@@ -55,11 +68,11 @@ cursor.execute("SELECT * from 'Reg'")
 all_regions = cursor.fetchall()
 
 # (81, 'Новосибирская область')
-#region = all_regions[81:82][0]
+region = all_regions[81:82][0]
 # (75, 'Республика Тыва')
 #region = all_regions[75:76][0]
 # (74, 'Республика Алтай')
-region = all_regions[74:75][0]
+#region = all_regions[74:75][0]
 # (74, 'Республика Алтай')
 #region = all_regions[79:80][0]
 # (87, 'Забайкальский край')
@@ -145,44 +158,59 @@ model_kwargs["step"] = step
 
 # Observed Data
 
-df_region = df_region[['IsT', 'IgT', 'EsT + EgT']].loc[t_start: t_end]
+df_region = df_region[['IsT', 'IgT', 'EsT + EgT']].loc[t_start:t_end]
 
 # Region initial parameters (Optuna)
 
 ## Novosibirsk region
-# params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 2662.395}
-# q = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'beta': 2.654346520660705, 'gamma_1': 0.3469786655125636, 
-#      'gamma_2': 0.505749789891934, 'omega': 2.071221852675745, 'phi_m': 0.23507541421386322, 
-#      'phi_p': 2.256611292357248, 'tg': 0.05065008936871193, 'alpha': 0.1601592462668639, 
-#      'non-treated-minus': 0.4861400303057526, 'non-treated-plus': 0.35143218570671464, 'N': 2662.395}
+params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 2662.395}
+region_par_file = 'data_and_misc/nsk-pars.csv'
+region_pars = pd.read_csv(region_par_file, index_col=0)
+params['for_mu'] = region_pars['mu']/1000
+params['for_b'] = region_pars['b']/1000
+q = {'beta': 2.704169304040101, 'gamma_1': 0.3752149963255313, 'gamma_2': 0.5144187636510301, 'omega': 2.974807543722621,
+     'phi_m': 0.3656248362171022, 'phi_p': 2.3844226567067466, 'tg': 0.058017830902826736, 'alpha': 0.06646124052424837,
+     'non-treated-minus': 0.2792616945863515, 'non-treated-plus': 0.36374174195065573,}
 
 ## Republic of Tyva
 # params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 306.688}
-# q = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'beta': 2.601793732527799, 'gamma_1': 0.319941331626464, 
-#      'gamma_2': 0.8006691263019727, 'omega': 3.6202351047926182, 'phi_m': 0.2098934922097551, 
-#      'phi_p': 2.4284100965259787, 'tg': 0.03402143708036411, 'alpha': 0.09155680517496287, 
-#      'non-treated-minus': 0.47741062816841157, 'non-treated-plus': 0.34772439562448426, 'N': 306.688}
+# region_par_file = 'data_and_misc/tyva-pars.csv'
+# region_pars = pd.read_csv(region_par_file, index_col=0)
+# params['for_mu'] = region_pars['mu']/1000
+# params['for_b'] = region_pars['b']/1000
+# q = {'beta': 3.0595242614081193, 'gamma_1': 0.314047488267462, 'gamma_2': 0.8646052017265298, 'omega': 3.8096240766053557,
+#      'phi_m': 0.2789216557824076, 'phi_p': 2.79410010298351, 'tg': 0.02258103893012728, 'alpha': 0.03849714587885478,
+#      'non-treated-minus': 0.1810125894343547, 'non-treated-plus': 0.3673012726693858,}
 
 ## Republic of Altay 
-params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 205.641}
-q = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'beta': 4.327767129197541, 'gamma_1': 0.26013643859076974, 
-     'gamma_2': 0.5372545052276511, 'omega': 0.6285472742679823, 'phi_m': 0.3245256229587285, 
-     'phi_p': 2.839711394080422, 'tg': 0.04062440431740133, 'alpha': 0.04827864464936903, 
-     'non-treated-minus': 0.4494758508276996, 'non-treated-plus': 0.3423880868783986, 'N': 205.641}
+# params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 205.641}
+# region_par_file = 'data_and_misc/alt-pars.csv'
+# region_pars = pd.read_csv(region_par_file, index_col=0)
+# params['for_mu'] = region_pars['mu']/1000
+# params['for_b'] = region_pars['b']/1000
+# q = {'beta': 3.4292732725464443, 'gamma_1': 0.4119083416840538, 'gamma_2': 0.9600972266750407, 'omega': 1.337010526947822,
+#      'phi_m': 0.41142958713035943, 'phi_p': 2.4749675127522215, 'tg': 0.01969030187843025, 'alpha': 0.15715045668700994,
+#      'non-treated-minus': 0.4855747047302174, 'non-treated-plus': 0.4630607784662653,}
 
 ## Irkutsk region
-#params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 2429.757}
-# q = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'beta': 2.4890246346229015, 'gamma_1': 0.2847437061544325, 
-#      'gamma_2': 0.3246048091657131, 'omega': 1.216284773894436, 'phi_m': 0.2322545912321422, 
-#      'phi_p': 2.1116876911098963, 'tg': 0.001857910804505892, 'alpha': 0.07885276264567517, 
-#      'non-treated-minus': 0.3359328371404097, 'non-treated-plus': 0.3623936751468885, 'N': 2429.757}
+# params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 2429.757}
+# region_par_file = 'data_and_misc/irk-pars.csv'
+# region_pars = pd.read_csv(region_par_file, index_col=0)
+# params['for_mu'] = region_pars['mu']/1000
+# params['for_b'] = region_pars['b']/1000
+# q = {'beta': 3.026975448115385, 'gamma_1': 0.32094609418376846, 'gamma_2': 0.3289663648066753, 'omega': 1.5050196115525294,
+#      'phi_m': 0.2774709662197925, 'phi_p': 2.5848240366561375, 'tg': 0.049824014616231385, 'alpha': 0.06884751909552383,
+#      'non-treated-minus': 0.23273012061320636, 'non-treated-plus': 0.3280706058700137,}
 
 ## Zabaikalsky region
-#params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 1106.977}
-# q = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'beta': 2.4604959237358273, 'gamma_1': 0.41880543161678996, 
-#      'gamma_2': 0.3316293220208531, 'omega': 0.8507734314463249, 'phi_m': 0.3437445535486679, 
-#      'phi_p': 1.707315405011937, 'tg': 0.04916855132926207, 'alpha': 0.09035720280784947, 
-#      'non-treated-minus': 0.4910789037827716, 'non-treated-plus': 0.22735980734715935, 'N': 1106.977}
+# params = {'b': 0.0142, 'mu': 0.0174, 'k': 4000000, 'N': 1106.977}
+# region_par_file = 'data_and_misc/zab-pars.csv'
+# region_pars = pd.read_csv(region_par_file, index_col=0)
+# params['for_mu'] = region_pars['mu']/1000
+# params['for_b'] = region_pars['b']/1000
+# q = {'beta': 2.1123367353146585, 'gamma_1': 0.29348543672329724, 'gamma_2': 0.357245993934584, 'omega': 0.7924532167130841,
+#      'phi_m': 0.2752931696964827, 'phi_p': 1.462879091967968, 'tg': 0.06947944774920821, 'alpha': 0.13183907757427007,
+#      'non-treated-minus': 0.2683669616291162, 'non-treated-plus': 0.4755792697224055,}
 
 def direct_problem(theta):
     params['beta'] = theta[0]
@@ -231,58 +259,29 @@ p = {
 res = direct_problem(list(p.values()))
 for key in df_region.columns:
     print(key)
-    df_region[key].plot()
-    res[key].plot()
-    plt.show()
-    
+    # df_region[key].plot()
+    # res[key].plot()
+    # plt.show()
 
-# PyMC
-@as_op(itypes=[pt.dvector], otypes=[pt.dmatrix])
-def pytensor_forward_model_matrix(theta):
-    params['beta'] = theta[0]
-    params['gamma_1'] = theta[1]
-    params['gamma_2'] = theta[2]
-    params['omega'] = theta[3]
-    params['phi_m'] = theta[4]
-    params['phi_p'] = theta[5]
-    params['tg'] = theta[6]
-    params['alpha'] = theta[7]
-    params['non-treated-minus'] = theta[8]
-    params['non-treated-plus'] = theta[9]
-
-    coef_minus = params['non-treated-minus']
-    coef_plus = params['non-treated-plus']
-    initial_state["Es"] = initial_state["EsT"] * coef_minus
-    initial_state["Eg"] = initial_state["EgT"] * coef_minus
-    initial_state["Is"] = initial_state["IsT"] * coef_plus
-    initial_state["Ig"] = initial_state["IgT"] * coef_plus
-
-    res = ode_solve(params=params, initial_state=initial_state, **model_kwargs)
-    res["EsT + EgT"] = Data(data=res["EsT"].data + res["EgT"].data, points=res["EgT"].points, keys=["ET"])
-
-    data = {
-        'index': res['IgT'].points.reshape(-1),
-        'IsT': res['IsT'].data.reshape(-1),
-        'IgT': res['IgT'].data.reshape(-1),
-        'EsT + EgT': res['EsT + EgT'].data.reshape(-1)
-    }
-
-    return pd.DataFrame(data).set_index('index').drop(2019).to_numpy()
-    
 with pm.Model() as tb_model:
     # Priors
-    beta = pm.TruncatedNormal("beta", mu=q['beta'], sigma=2, lower=0.001, upper=20, initval=q['beta'])
-    tg = pm.TruncatedNormal("tg", mu=q['tg'], sigma=0.05, lower=0.001, upper=0.5, initval=q['tg'])
-    omega = pm.TruncatedNormal("omega", mu=q['omega'], sigma=0.4, lower=0.001, upper=4, initval=q['omega'])
-    alpha = pm.TruncatedNormal("alpha", mu=q['alpha'], sigma=0.05, lower=0.001, upper=0.5, initval=q['alpha'])
-    phi_m = pm.TruncatedNormal("phi_m", mu=q['phi_m'], sigma=0.1, lower=0.001, upper=0.999, initval=q['phi_m'])
-    phi_p = pm.TruncatedNormal("phi_p", mu=q['phi_p'], sigma=0.3, lower=0.001, upper=3, initval=q['phi_p'])
-    gamma_1 = pm.TruncatedNormal("gamma_1", mu=q['gamma_1'], sigma=0.1, lower=0.001, upper=0.999, initval=q['gamma_1'])
-    gamma_2 = pm.TruncatedNormal("gamma_2", mu=q['gamma_2'], sigma=0.2, lower=0.001, upper=2, initval=q['gamma_2'])
-    non_treated_minus = pm.TruncatedNormal("non_treated_minus", mu=q['non-treated-minus'], sigma=0.05, lower=0.001, upper=0.5, initval=q['non-treated-minus'])
-    non_treated_plus = pm.TruncatedNormal("non_treated_plus", mu=q['non-treated-plus'], sigma=0.05, lower=0.001, upper=0.5, initval=q['non-treated-plus'])
-    
-    sigma = pm.HalfNormal("sigma", sigma=50)
+    beta = pm.TruncatedNormal("beta", mu=q['beta'], sigma=q['beta'] / 10, lower=0.001, upper=20, initval=q['beta'])
+    tg = pm.TruncatedNormal("tg", mu=q['tg'], sigma=q['tg'] / 10, lower=0.001, upper=0.5, initval=q['tg'])
+    omega = pm.TruncatedNormal("omega", mu=q['omega'], sigma=q['omega'] / 10, lower=0.001, upper=4, initval=q['omega'])
+    alpha = pm.TruncatedNormal("alpha", mu=q['alpha'], sigma=q['alpha'] / 10, lower=0.001, upper=0.5, initval=q['alpha'])
+    phi_m = pm.TruncatedNormal("phi_m", mu=q['phi_m'], sigma=q['phi_m'] / 10, lower=0.001, upper=0.999, initval=q['phi_m'])
+    phi_p = pm.TruncatedNormal("phi_p", mu=q['phi_p'], sigma=q['phi_p'] / 10, lower=0.001, upper=3, initval=q['phi_p'])
+    gamma_1 = pm.TruncatedNormal("gamma_1", mu=q['gamma_1'], sigma=q['gamma_1'] / 10, lower=0.001, upper=0.999, initval=q['gamma_1'])
+    gamma_2 = pm.TruncatedNormal("gamma_2", mu=q['gamma_2'], sigma=q['gamma_2'] / 10, lower=0.001, upper=2,
+                                 initval=q['gamma_2'])
+    non_treated_minus = pm.TruncatedNormal("non_treated_minus", mu=q['non-treated-minus'],
+                                           sigma=q['non-treated-minus'] / 10, lower=0.001, upper=0.5,
+                                           initval=q['non-treated-minus'])
+    non_treated_plus = pm.TruncatedNormal("non_treated_plus", mu=q['non-treated-plus'],
+                                          sigma=q['non-treated-plus'] / 10, lower=0.001, upper=0.5,
+                                          initval=q['non-treated-plus'])
+
+    sigma = pm.HalfNormal("sigma", sigma=30)
 
     # Ode solution function
     ode_solution = pytensor_forward_model_matrix(
@@ -301,14 +300,19 @@ if not RESULTS_PATH.exists():
 
 # Run MCMC sampling
 with tb_model:
-    trace = pm.sample(tune=1000,
-                      draws=50000,
-                      step=pm.DEMetropolis(),
-                      chains=4,
-                      cores=1,
-                      progressbar=True)
+    trace = pm.sample(
+        tune=2000,                    # Разогрев для адаптации
+        draws=6000,                   # Основные сэмплы
+        step=pm.DEMetropolisZ(),      # Сэмплер
+        chains=4,                     # 4 цепочки (для 13 параметров)
+        cores=1,                      # Параллельные ядра
+        progressbar=True,
+        random_seed=42,
+        discard_tuned_samples=True,   # Не сохранять разогрев
+        return_inferencedata=True     # Возвращать удобный формат
+    )
                       
-trace.to_netcdf(RESULTS_PATH / 'Altay_trace_DEMetropolis_50000.nc')
+trace.to_netcdf(RESULTS_PATH / 'NSO_trace_DEMetropolis_6000.nc')
 
 # Plot result parameters distribution
 
@@ -326,7 +330,7 @@ def plot_traces(traces, burnin=2000):
                           color='#AA0022')
                           
 plot_traces(trace, burnin=0)
-plt.savefig(RESULTS_PATH / "Altay_trace_DEMetropolis_50000.png")
+plt.savefig(RESULTS_PATH / "NSO_trace_DEMetropolis_6000.png")
 
 # R-hat values
 
